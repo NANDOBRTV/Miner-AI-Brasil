@@ -1,0 +1,11 @@
+{
+  "workerId": "worker-example",
+  "enabled": false,
+  "mode": "monitor-only",
+  "coin": null,
+  "poolUrl": null,
+  "walletAddress": null,
+  "maxPowerWatts": 0,
+  "maxDailyCostBrl": 0,
+  "notes": "Modelo de configuração. Não habilita mineração; preencher somente após validar equipamento, custos e permissões do provedor."
+}
