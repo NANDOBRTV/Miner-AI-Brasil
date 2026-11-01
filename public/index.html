@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#09111f"><title>Miner AI Brasil</title>
+<style>
+:root{color-scheme:dark;--bg:#09111f;--panel:#111d30;--line:#263750;--muted:#9aabc2;--green:#39d98a;--blue:#65a9ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#142943,var(--bg) 60%);color:#edf4ff;font:15px system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1100px;margin:auto;padding:24px 16px 50px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.brand{font-size:25px;font-weight:800;letter-spacing:-.7px}.brand span{color:var(--green)}.muted{color:var(--muted)}.pill{border:1px solid #745c2d;background:#332817;color:#ffd58a;padding:7px 12px;border-radius:30px;font-size:12px}
+h1{font-size:clamp(27px,5vw,42px);margin:30px 0 8px;letter-spacing:-1.3px}.intro{color:var(--muted);max-width:720px;line-height:1.6}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin:24px 0}.card{background:linear-gradient(145deg,#15243a,#101a2b);border:1px solid var(--line);border-radius:16px;padding:18px}.label{color:var(--muted);font-size:13px}.value{font-size:25px;font-weight:750;margin-top:8px}.green{color:var(--green)}
+section{margin-top:18px}.section-title{font-size:18px;font-weight:700;margin:0 0 12px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}table{width:100%;border-collapse:collapse;min-width:560px;background:#101a2b}th,td{text-align:left;padding:14px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:12px;font-weight:600}tr:last-child td{border:0}.coin{font-weight:700}.symbol{color:var(--muted);font-size:12px}
+.note{line-height:1.6;color:var(--muted);font-size:13px}.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}button{background:#1d3554;border:1px solid #355477;color:#eaf3ff;padding:10px 14px;border-radius:10px;font-weight:650}button:active{transform:scale(.98)}
+footer{margin-top:30px;color:var(--muted);font-size:12px}
+@media(max-width:520px){main{padding:18px 12px 35px}.brand{font-size:21px}.card{padding:15px}}
+</style></head>
+<body><main>
+<header class="top"><div class="brand">⛏️ MINER <span>AI</span> BRASIL</div><div class="pill">● MINERAÇÃO DESATIVADA</div></header>
+<h1>Painel inteligente de mineração</h1>
+<p class="intro">Acompanhe o mercado de várias criptomoedas e prepare uma análise de rentabilidade baseada nos dados reais do seu equipamento. Esta primeira versão funciona como painel de monitoramento — não inicia mineração em nuvem.</p>
+<div class="grid">
+<div class="card"><div class="label">Workers ativos</div><div class="value" id="workers">0</div></div>
+<div class="card"><div class="label">Hashrate total</div><div class="value" id="hashrate">0 H/s</div></div>
+<div class="card"><div class="label">Modo do sistema</div><div class="value green">Observação</div></div>
+<div class="card"><div class="label">Estado da API</div><div class="value" id="apiState">Verificando…</div></div>
+</div>
+<section><h2 class="section-title">Mercado de criptomoedas</h2><div class="table-wrap"><table><thead><tr><th>Moeda</th><th>Algoritmo</th><th>Preço BRL</th><th>Variação 24h</th></tr></thead><tbody id="coins"><tr><td colspan="4">Carregando cotações…</td></tr></tbody></table></div><div class="actions"><button id="refresh">Atualizar cotações</button><span class="note" id="updated">Aguardando dados de mercado.</span></div></section>
+<section class="card"><h2 class="section-title">Como a IA avaliará a mineração</h2><p class="note">A recomendação só será calculada quando houver hashrate medido, consumo em watts, tarifa de energia, receita estimada, dificuldade da rede e custos de pool. Preço subindo não significa mineração lucrativa.</p><p class="note">Moedas monitoradas: BTC, LTC, DOGE, XMR e ETC. A seleção automática de moeda e qualquer execução de minerador permanecem bloqueadas até a configuração segura de um worker autorizado.</p></section>
+<footer>Miner AI Brasil · versão 0.1.0 · Nunca informe seed phrase, chave privada ou senha de carteira neste painel.</footer>
+</main>
+<script>
+const money=n=>n==null?"—":new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:2}).format(n);
+async function loadStatus(){try{const r=await fetch("/api/status");if(!r.ok)throw Error();const s=await r.json();document.querySelector("#workers").textContent=s.workers;document.querySelector("#hashrate").textContent=s.hashrate+" H/s";document.querySelector("#apiState").textContent="Online"}catch{document.querySelector("#apiState").textContent="Indisponível"}}
+async function loadMarket(){const body=document.querySelector("#coins");try{const r=await fetch("/api/market");if(!r.ok)throw Error();const d=await r.json();body.innerHTML=d.coins.map(c=>`<tr><td><span class="coin">${c.name}</span><br><span class="symbol">${c.symbol}</span></td><td>${c.algorithm}</td><td>${money(c.brl)}</td><td style="color:${c.change24h==null?"#9aabc2":c.change24h>=0?"#39d98a":"#ff8585"}">${c.change24h==null?"—":c.change24h.toFixed(2)+"%"}</td></tr>`).join("");document.querySelector("#updated").textContent="Atualizado em "+new Date(d.updatedAt).toLocaleString("pt-BR")}catch{body.innerHTML='<tr><td colspan="4">Não foi possível carregar as cotações. Tente novamente.</td></tr>';document.querySelector("#updated").textContent="API de mercado indisponível."}}
+document.querySelector("#refresh").addEventListener("click",loadMarket);loadStatus();loadMarket();setInterval(loadMarket,60000);setInterval(loadStatus,30000);
+</script></body></html>
