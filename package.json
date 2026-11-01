@@ -4,6 +4,12 @@
   "private": true,
   "description": "Painel gratuito de monitoramento e análise de mineração de criptomoedas.",
   "type": "module",
-  "engines": { "node": ">=20" },
-  "scripts": { "start": "node src/server.js", "check": "node --check src/server.js && node --check src/strategy.js" }
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "check": "node --check src/server.js && node --check src/strategy.js && node --check src/workers.js && node --check worker/agent.js",
+    "test": "node --test"
+  }
 }
