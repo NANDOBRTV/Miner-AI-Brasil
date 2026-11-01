@@ -40,3 +40,19 @@ O arquivo `render.yaml` descreve um serviço web Node. No Render, crie um novo B
 2. Adicionar entrada segura dos dados de hardware e tarifa elétrica.
 3. Criar simulação comparativa de custo e receita por moeda.
 4. Integrar workers externos autorizados somente após definir limites de custo, potência e desligamento automático.
+
+
+## Simulador de rentabilidade (0.2.0)
+
+Endpoint `POST /api/simulation` recebe JSON com `hashrate`, `powerWatts`, `electricityBrlKwh` e `grossRevenueBrlDay`. Campos opcionais: `poolFeePercent`, `uptimePercent` e `hardwareCostBrl`. A receita bruta é uma estimativa fornecida pelo operador; o painel desconta energia, taxa da pool e indisponibilidade. Não é previsão garantida de lucro.
+
+## Integração de workers (telemetria somente)
+
+1. Gere um segredo forte no Termux: `openssl rand -hex 32`.
+2. Cadastre esse valor no Render como variável de ambiente `WORKER_API_TOKEN` e aguarde o deploy.
+3. Em cada equipamento próprio/autorizado, configure as variáveis de `worker/.env.example` (use o mesmo token em ambiente protegido).
+4. Execute com Node.js 20+: `node worker/agent.js`.
+
+O agente envia heartbeat para `POST /api/workers/heartbeat` a cada 30 segundos. O painel marca como sem sinal workers que não atualizam há 90 segundos. Endpoint `GET /api/workers` lista a telemetria. O token é obrigatório e comparado em tempo constante.
+
+**Limite desta integração:** o agente transmite somente métricas declaradas por variáveis de ambiente; ele não detecta automaticamente hardware, não inicia/paralisa mineradores, não acessa carteiras e não executa comandos remotos. O registro de workers fica em memória e pode ser reiniciado quando o serviço Render reiniciar ou suspender. Use apenas workers que você controla e provedores que permitam mineração expressamente.
