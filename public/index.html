@@ -26,6 +26,50 @@ footer{margin-top:30px;color:var(--muted);font-size:12px}
 </div>
 <section><h2 class="section-title">Mercado de criptomoedas</h2><div class="table-wrap"><table><thead><tr><th>Moeda</th><th>Algoritmo</th><th>Preço BRL</th><th>Variação 24h</th></tr></thead><tbody id="coins"><tr><td colspan="4">Carregando cotações…</td></tr></tbody></table></div><div class="actions"><button id="refresh">Atualizar cotações</button><span class="note" id="updated">Aguardando dados de mercado.</span></div></section>
 <section class="card"><h2 class="section-title">Como a IA avaliará a mineração</h2><p class="note">A recomendação só será calculada quando houver hashrate medido, consumo em watts, tarifa de energia, receita estimada, dificuldade da rede e custos de pool. Preço subindo não significa mineração lucrativa.</p><p class="note">Moedas monitoradas: BTC, LTC, DOGE, XMR e ETC. A seleção automática de moeda e qualquer execução de minerador permanecem bloqueadas até a configuração segura de um worker autorizado.</p></section>
+<section class="card" id="simulador">
+<h2 class="section-title">Simulador de rentabilidade</h2>
+<p class="note">Informe uma estimativa diária de receita bruta da moeda/pool. O simulador desconta energia, taxa da pool e disponibilidade.</p>
+<div class="sim-grid">
+<label>Hashrate<input id="simHash" type="number" min="0.000001" step="any" value="1000"></label>
+<label>Unidade<select id="simUnit"><option>H/s</option><option>KH/s</option><option>MH/s</option><option>GH/s</option><option>TH/s</option></select></label>
+<label>Consumo (watts)<input id="simPower" type="number" min="0" step="any" value="120"></label>
+<label>Tarifa (R$/kWh)<input id="simTariff" type="number" min="0" step="any" value="0.90"></label>
+<label>Receita bruta estimada (R$/dia)<input id="simRevenue" type="number" min="0" step="any" value="2"></label>
+<label>Taxa da pool (%)<input id="simFee" type="number" min="0" max="100" step="any" value="1"></label>
+<label>Disponibilidade (%)<input id="simUptime" type="number" min="0" max="100" step="any" value="95"></label>
+<label>Custo do equipamento (R$)<input id="simHardware" type="number" min="0" step="any" value="0"></label>
+</div>
+<div class="actions"><button id="simulate">Calcular estimativa</button><span id="simStatus" class="note">Simulação local via API.</span></div>
+<div id="simResult" class="sim-result note">Preencha os dados e toque em calcular.</div>
+</section>
+<section class="card" id="workersPanel">
+<h2 class="section-title">Workers conectados</h2>
+<p class="note">O agente envia somente telemetria. Não executa mineradores nem envia comandos para o equipamento.</p>
+<div id="workerList" class="note">Carregando workers…</div>
+<div class="actions"><button id="refreshWorkers">Atualizar workers</button><span class="note">Workers sem heartbeat por 90 segundos aparecem como inativos.</span></div>
+</section>
+<style>
+.sim-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:14px 0}
+.sim-grid label{display:grid;gap:6px;color:var(--muted);font-size:12px}
+.sim-grid input,.sim-grid select{width:100%;min-width:0;background:#091525;color:#edf4ff;border:1px solid var(--line);border-radius:9px;padding:10px;font:inherit}
+.sim-result{margin-top:12px;padding:12px;background:#091525;border:1px solid var(--line);border-radius:10px;line-height:1.7}
+.metric-good{color:var(--green)}.metric-bad{color:#ff8585}
+.worker-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+</style>
+<script>
+const brl=n=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(n);
+document.querySelector("#simulate").addEventListener("click",async()=>{
+ const n=id=>Number(document.querySelector("#"+id).value);
+ const payload={hashrate:n("simHash"),hashrateUnit:document.querySelector("#simUnit").value,powerWatts:n("simPower"),electricityBrlKwh:n("simTariff"),grossRevenueBrlDay:n("simRevenue"),poolFeePercent:n("simFee"),uptimePercent:n("simUptime"),hardwareCostBrl:n("simHardware")};
+ const out=document.querySelector("#simResult");document.querySelector("#simStatus").textContent="Calculando…";
+ try{const r=await fetch("/api/simulation",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw Error(d.error||"Dados inválidos");
+ out.innerHTML=`<strong>Resultado estimado</strong><br>Energia: ${d.energyKwhDay.toFixed(2)} kWh/dia<br>Custo de energia: ${brl(d.energyCostBrlDay)}/dia<br>Receita após taxa/disponibilidade: ${brl(d.grossAfterPoolBrlDay)}/dia<br><strong class="${d.profitableOnInputs?"metric-good":"metric-bad"}">Resultado líquido: ${brl(d.netDailyBrl)}/dia</strong><br>Estimativa em 30 dias: ${brl(d.monthlyNetBrl)}<br>Tarifa de equilíbrio: ${d.breakEvenTariffBrlKwh===null?"—":brl(d.breakEvenTariffBrlKwh)+"/kWh"}<br>Retorno do equipamento: ${d.estimatedPaybackDays===null?"não calculado":d.estimatedPaybackDays.toFixed(1)+" dias"}<p>${d.warning}</p>`;
+ document.querySelector("#simStatus").textContent="Cálculo concluído";
+ }catch(e){out.textContent=e.message;document.querySelector("#simStatus").textContent="Revise os valores";}
+});
+async function loadWorkers(){const el=document.querySelector("#workerList");try{const r=await fetch("/api/workers");const d=await r.json();if(!r.ok)throw Error();el.innerHTML=d.workers.length?d.workers.map(w=>`<div class="worker-row"><span><strong>${w.name}</strong> · ${w.coin}<br><small>${w.hashrate} ${w.hashrateUnit} · ${w.powerWatts} W</small></span><span>${w.status==="online"?"🟢 Online":w.status==="idle"?"🟡 Ocioso":"⚪ Sem sinal"}<br><small>${new Date(w.lastSeen).toLocaleString("pt-BR")}</small></span></div>`).join(""):"Nenhum worker enviou telemetria ainda.";}catch{el.textContent="Não foi possível consultar os workers."}}
+document.querySelector("#refreshWorkers").addEventListener("click",loadWorkers);loadWorkers();setInterval(loadWorkers,30000);
+</script>
 <footer>Miner AI Brasil · versão 0.1.0 · Nunca informe seed phrase, chave privada ou senha de carteira neste painel.</footer>
 </main>
 <script>
